@@ -757,37 +757,29 @@ namespace Microsoft.Data.Common
         // This method assumes dataSource parameter is in TCP connection string format.
         internal static bool IsAzureSqlServerEndpoint(string dataSource)
         {
-            int length = dataSource.Length;
             // remove server port
-            int foundIndex = dataSource.LastIndexOf(',');
-            if (foundIndex >= 0)
+            int i = dataSource.LastIndexOf(',');
+            if (i >= 0)
             {
-                length = foundIndex;
+                dataSource = dataSource.Substring(0, i);
             }
 
             // check for the instance name
-            foundIndex = dataSource.LastIndexOf('\\', length - 1, length - 1);
-            if (foundIndex > 0)
+            i = dataSource.LastIndexOf('\\');
+            if (i >= 0)
             {
-                length = foundIndex;
+                dataSource = dataSource.Substring(0, i);
             }
 
-            // trim trailing whitespace
-            while (length > 0 && char.IsWhiteSpace(dataSource[length - 1]))
-            {
-                length -= 1;
-            }
+            // trim redundant whitespace
+            dataSource = dataSource.Trim();
 
             // check if servername end with any azure endpoints
-            for (int index = 0; index < AzureSqlServerEndpoints.Length; index++)
+            for (i = 0; i < AzureSqlServerEndpoints.Length; i++)
             {
-                string endpoint = AzureSqlServerEndpoints[index];
-                if (length > endpoint.Length)
+                if (dataSource.EndsWith(AzureSqlServerEndpoints[i], StringComparison.OrdinalIgnoreCase))
                 {
-                    if (string.Compare(dataSource, length - endpoint.Length, endpoint, 0, endpoint.Length, StringComparison.OrdinalIgnoreCase) == 0)
-                    {
-                        return true;
-                    }
+                    return true;
                 }
             }
 
