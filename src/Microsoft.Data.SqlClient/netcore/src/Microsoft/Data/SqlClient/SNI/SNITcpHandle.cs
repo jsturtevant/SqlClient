@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
@@ -17,6 +18,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Data.Common;
 using Microsoft.Data.ProviderBase;
+using Microsoft.Data.SqlClient;
+
 
 namespace Microsoft.Data.SqlClient.SNI
 {
@@ -27,14 +30,14 @@ namespace Microsoft.Data.SqlClient.SNI
     {
         private readonly string _targetServer;
         private readonly object _sendSync;
-        private readonly Socket _socket;
-        private NetworkStream _tcpStream;
+        //private readonly Socket _socket;
+        private Wasi.NetworkStream _tcpStream;
         private readonly string _hostNameInCertificate;
         private readonly string _serverCertificateFilename;
         private readonly bool _tlsFirst;
-
+        private Wasi.TcpClient _tcpClient;
         private Stream _stream;
-        private SslStream _sslStream;
+        private Wasi.SslStream _sslStream;
         private SslOverTdsStream _sslOverTdsStream;
         private SNIAsyncCallback _receiveCallback;
         private SNIAsyncCallback _sendCallback;
@@ -102,15 +105,8 @@ namespace Microsoft.Data.SqlClient.SNI
         public override int ProtocolVersion
         {
             get
-            {
-                try
-                {
-                    return (int)_sslStream.SslProtocol;
-                }
-                catch
-                {
-                    return base.ProtocolVersion;
-                }
+            {                
+                return base.ProtocolVersion;
             }
         }
 
@@ -154,127 +150,19 @@ namespace Microsoft.Data.SqlClient.SNI
 
                 try
                 {
-                    bool reportError = true;
-
-                    SqlClientEventSource.Log.TrySNITraceEvent(nameof(SNITCPHandle), EventType.INFO, "Connection Id {0}, Connecting to serverName {1} and port {2}", args0: _connectionId, args1: serverName, args2: port);
-                    // We will always first try to connect with serverName as before and let DNS resolve the serverName.
-                    // If DNS resolution fails, we will try with IPs in the DNS cache if they exist. We try with cached IPs based on IPAddressPreference.
-                    // Exceptions will be thrown to the caller and be handled as before.
-                    try
-                    {
-                        if (parallel)
-                        {
-                            _socket = TryConnectParallel(serverName, port, timeout, ref reportError, cachedFQDN, ref pendingDNSInfo);
-                        }
-                        else
-                        {
-                            _socket = Connect(serverName, port, timeout, ipPreference, cachedFQDN, ref pendingDNSInfo);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        if (timeout.IsExpired)
-                        {
-                            throw;
-                        }
-                        // Retry with cached IP address
-                        if (ex is SocketException || ex is ArgumentException || ex is AggregateException)
-                        {
-                            if (hasCachedDNSInfo == false)
-                            {
-                                SqlClientEventSource.Log.TrySNITraceEvent(nameof(SNITCPHandle), EventType.ERR, "Connection Id {0}, Cached DNS Info not found, exception occurred thrown: {1}", args0: _connectionId, args1: ex?.Message);
-                                throw;
-                            }
-                            else
-                            {
-                                int portRetry = string.IsNullOrEmpty(cachedDNSInfo.Port) ? port : int.Parse(cachedDNSInfo.Port);
-                                SqlClientEventSource.Log.TrySNITraceEvent(nameof(SNITCPHandle), EventType.INFO, "Connection Id {0}, Retrying with cached DNS IP Address {1} and port {2}", args0: _connectionId, args1: cachedDNSInfo.AddrIPv4, args2: cachedDNSInfo.Port);
-
-                                string firstCachedIP;
-                                string secondCachedIP;
-
-                                if (SqlConnectionIPAddressPreference.IPv6First == ipPreference)
-                                {
-                                    firstCachedIP = cachedDNSInfo.AddrIPv6;
-                                    secondCachedIP = cachedDNSInfo.AddrIPv4;
-                                }
-                                else
-                                {
-                                    firstCachedIP = cachedDNSInfo.AddrIPv4;
-                                    secondCachedIP = cachedDNSInfo.AddrIPv6;
-                                }
-
-                                try
-                                {
-                                    if (parallel)
-                                    {
-                                        _socket = TryConnectParallel(firstCachedIP, portRetry, timeout, ref reportError, cachedFQDN, ref pendingDNSInfo);
-                                    }
-                                    else
-                                    {
-                                        _socket = Connect(firstCachedIP, portRetry, timeout, ipPreference, cachedFQDN, ref pendingDNSInfo);
-                                    }
-                                }
-                                catch (Exception exRetry)
-                                {
-                                    if (timeout.IsExpired)
-                                    {
-                                        throw;
-                                    }
-                                    if (exRetry is SocketException || exRetry is ArgumentNullException
-                                        || exRetry is ArgumentException || exRetry is ArgumentOutOfRangeException || exRetry is AggregateException)
-                                    {
-                                        SqlClientEventSource.Log.TrySNITraceEvent(nameof(SNITCPHandle), EventType.INFO, "Connection Id {0}, Retrying exception {1}", args0: _connectionId, args1: exRetry?.Message);
-                                        if (parallel)
-                                        {
-                                            _socket = TryConnectParallel(secondCachedIP, portRetry, timeout, ref reportError, cachedFQDN, ref pendingDNSInfo);
-                                        }
-                                        else
-                                        {
-                                            _socket = Connect(secondCachedIP, portRetry, timeout, ipPreference, cachedFQDN, ref pendingDNSInfo);
-                                        }
-                                    }
-                                    else
-                                    {
-                                        SqlClientEventSource.Log.TrySNITraceEvent(nameof(SNITCPHandle), EventType.ERR, "Connection Id {0}, Retry failed, exception occurred: {1}", args0: _connectionId, args1: exRetry?.Message);
-                                        throw;
-                                    }
-                                }
-                            }
-                        }
-                        else
-                        {
-                            throw;
-                        }
-                    }
-
-                    if (_socket == null || !_socket.Connected)
-                    {
-                        if (_socket != null)
-                        {
-                            _socket.Dispose();
-                            _socket = null;
-                        }
-
-                        if (reportError)
-                        {
-                            SqlClientEventSource.Log.TrySNITraceEvent(nameof(SNITCPHandle), EventType.ERR, "Connection Id {0} could not be opened, exception occurred: {1}", args0: _connectionId, args1: Strings.SNI_ERROR_40);
-                            ReportTcpSNIError(0, SNICommon.ConnOpenFailedError, Strings.SNI_ERROR_40);
-                        }
-                        SqlClientEventSource.Log.TrySNITraceEvent(nameof(SNITCPHandle), EventType.ERR, "Connection Id {0} Socket could not be opened.", args0: _connectionId);
-                        return;
-                    }
-
-                    _socket.NoDelay = true;
-                    _tcpStream = new SNINetworkStream(_socket, true);
-
+                    IEnumerable<IPAddress> ipAddresses = GetHostAddressesSortedByPreference(serverName, ipPreference);
+                    _tcpClient = new Wasi.TcpClient();
+                    _tcpClient.Connect(ipAddresses.ToArray(), port);
+                    
+                    _tcpStream = _tcpClient.GetStream();
                     Stream stream = _tcpStream;
                     if (!_tlsFirst)
                     {
                         _sslOverTdsStream = new SslOverTdsStream(_tcpStream, _connectionId);
                         stream = _sslOverTdsStream;
                     }
-                    _sslStream = new SNISslStream(stream, true, new RemoteCertificateValidationCallback(ValidateServerCertificate));
+                    _sslStream = new Wasi.SslStream(_tcpStream);
+                    //_sslStream = new SNISslStream(stream, true, new RemoteCertificateValidationCallback(ValidateServerCertificate));
                 }
                 catch (SocketException se)
                 {
@@ -357,7 +245,7 @@ namespace Microsoft.Data.SqlClient.SNI
         /// <exception cref="ArgumentOutOfRangeException">Thrown when ipPreference is not supported</exception>
         private static IEnumerable<IPAddress> GetHostAddressesSortedByPreference(string serverName, SqlConnectionIPAddressPreference ipPreference)
         {
-            IPAddress[] ipAddresses = Dns.GetHostAddresses(serverName);
+            IPAddress[] ipAddresses = Wasi.Dns.GetHostAddresses(serverName);
             AddressFamily? prioritiesFamily = ipPreference switch
             {
                 SqlConnectionIPAddressPreference.IPv4First => AddressFamily.InterNetwork,
@@ -627,7 +515,7 @@ namespace Microsoft.Data.SqlClient.SNI
                     }
                     else
                     {
-                        _sslStream.AuthenticateAsClient(_targetServer, null, s_supportedProtocols, false);
+                        _sslStream.AuthenticateAsClient(_targetServer);
                     }
                     if (_sslOverTdsStream is not null)
                     {
@@ -768,22 +656,24 @@ namespace Microsoft.Data.SqlClient.SNI
                 packet = null;
                 try
                 {
-                    if (timeoutInMilliseconds > 0)
-                    {
-                        _socket.ReceiveTimeout = timeoutInMilliseconds;
-                    }
-                    else if (timeoutInMilliseconds == -1)
-                    {
-                        // SqlClient internally represents infinite timeout by -1, and for TcpClient this is translated to a timeout of 0
-                        _socket.ReceiveTimeout = 0;
-                    }
-                    else
-                    {
-                        // otherwise it is timeout for 0 or less than -1
-                        SqlClientEventSource.Log.TrySNITraceEvent(nameof(SNITCPHandle), EventType.ERR, "Connection Id {0}, Error 258, Timeout error occurred.", args0: _connectionId);
-                        ReportTcpSNIError(0, SNICommon.ConnTimeoutError, Strings.SNI_ERROR_11);
-                        return TdsEnums.SNI_WAIT_TIMEOUT;
-                    }
+                    // if (timeoutInMilliseconds > 0)
+                    // {
+                    //     //_socket.ReceiveTimeout = timeoutInMilliseconds;
+                    //     _tcpStream.ReadTimeout = timeoutInMilliseconds;
+                    // }
+                    // else if (timeoutInMilliseconds == -1)
+                    // {
+                    //     // SqlClient internally represents infinite timeout by -1, and for TcpClient this is translated to a timeout of 0
+                    //     //_socket.ReceiveTimeout = 0;
+                    //     _tcpStream.ReadTimeout = -1;
+                    // }
+                    // else
+                    // {
+                    //     // otherwise it is timeout for 0 or less than -1
+                    //     SqlClientEventSource.Log.TrySNITraceEvent(nameof(SNITCPHandle), EventType.ERR, "Connection Id {0}, Error 258, Timeout error occurred.", args0: _connectionId);
+                    //     ReportTcpSNIError(0, SNICommon.ConnTimeoutError, Strings.SNI_ERROR_11);
+                    //     return TdsEnums.SNI_WAIT_TIMEOUT;
+                    // }
 
                     packet = RentPacket(headerSize: 0, dataSize: _bufferSize);
                     packet.ReadFromStream(_stream);
@@ -830,7 +720,8 @@ namespace Microsoft.Data.SqlClient.SNI
                 }
                 finally
                 {
-                    _socket.ReceiveTimeout = 0;
+                   // _socket.ReceiveTimeout = 0;
+                    //_tcpStream.ReadTimeout = -1;
                 }
             }
         }
@@ -903,11 +794,12 @@ namespace Microsoft.Data.SqlClient.SNI
                 // Since _socket.Connected alone doesn't guarantee if the connection is still active, we use it in
                 // combination with _socket.Poll method and _socket.Available == 0 check. When both of them
                 // return true we can safely determine that the connection is no longer active.
-                if (!_socket.Connected || (_socket.Poll(100, SelectMode.SelectRead) && _socket.Available == 0))
+                if (!_tcpStream.Connected )
                 {
                     SqlClientEventSource.Log.TrySNITraceEvent(nameof(SNITCPHandle), EventType.INFO, "Connection Id {0}, Socket not usable.", args0: _connectionId);
                     return TdsEnums.SNI_ERROR;
                 }
+                
             }
             catch (SocketException se)
             {
@@ -959,7 +851,8 @@ namespace Microsoft.Data.SqlClient.SNI
         /// </summary>
         public override void KillConnection()
         {
-            _socket.Shutdown(SocketShutdown.Both);
+             //_socket.Shutdown(SocketShutdown.Both);
+             _tcpClient.Dispose();
         }
 #endif
 

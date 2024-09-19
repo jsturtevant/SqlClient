@@ -31,7 +31,7 @@ namespace Microsoft.Data.SqlClient.SNI
         private NamedPipeClientStream _pipeStream;
         private SslOverTdsStream _sslOverTdsStream;
 
-        private SslStream _sslStream;
+        private Wasi.SslStream _sslStream;
         private SNIAsyncCallback _receiveCallback;
         private SNIAsyncCallback _sendCallback;
 
@@ -110,8 +110,8 @@ namespace Microsoft.Data.SqlClient.SNI
                     _sslOverTdsStream = new SslOverTdsStream(_pipeStream, _connectionId);
                     stream = _sslOverTdsStream;
                 }
-                _sslStream = new SNISslStream(stream, true, new RemoteCertificateValidationCallback(ValidateServerCertificate));
-
+                //_sslStream = new SNISslStream(stream, true, new RemoteCertificateValidationCallback(ValidateServerCertificate));
+                _sslStream = new Wasi.SslStream(stream);
                 _stream = _pipeStream;
                 _status = TdsEnums.SNI_SUCCESS;
             }
@@ -125,14 +125,9 @@ namespace Microsoft.Data.SqlClient.SNI
         {
             get
             {
-                try
-                {
-                    return (int)_sslStream.SslProtocol;
-                }
-                catch
-                {
-                    return base.ProtocolVersion;
-                }
+               
+                return base.ProtocolVersion;
+                
             }
         }
 
@@ -337,7 +332,7 @@ namespace Microsoft.Data.SqlClient.SNI
                     else
                     {
                         // TODO: Resolve whether to send _serverNameIndication or _targetServer. _serverNameIndication currently results in error. Why?
-                        _sslStream.AuthenticateAsClient(_targetServer, null, s_supportedProtocols, false);
+                        _sslStream.AuthenticateAsClient(_targetServer);
                     }
                     if (_sslOverTdsStream is not null)
                     {

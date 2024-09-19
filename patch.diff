@@ -1,0 +1,34 @@
+diff --git a/src/Microsoft.Data.SqlClient/netcore/src/Microsoft.Data.SqlClient.csproj b/src/Microsoft.Data.SqlClient/netcore/src/Microsoft.Data.SqlClient.csproj
+index 494bd0b9..69f908e1 100644
+--- a/src/Microsoft.Data.SqlClient/netcore/src/Microsoft.Data.SqlClient.csproj
++++ b/src/Microsoft.Data.SqlClient/netcore/src/Microsoft.Data.SqlClient.csproj
+@@ -2,10 +2,9 @@
+   <PropertyGroup>
+     <AssemblyName>Microsoft.Data.SqlClient</AssemblyName>
+     <TargetFrameworks>net8.0;net6.0</TargetFrameworks>
+-    <GeneratePlatformNotSupportedAssemblyMessage Condition="'$(OSGroup)' == 'AnyOS'">Microsoft.Data.SqlClient is not supported on this platform.</GeneratePlatformNotSupportedAssemblyMessage>
+     <OSGroup Condition="'$(OSGroup)' == ''">$(OS)</OSGroup>
++    <TargetsUnix Condition="'$(OSGroup)'!='Unix'">true</TargetsUnix>
+     <TargetsWindows Condition="'$(OSGroup)'=='Windows_NT'">true</TargetsWindows>
+-    <TargetsUnix Condition="'$(OSGroup)'=='Unix'">true</TargetsUnix>
+     <!-- Allow explicit addition of the Compile files instead of all project files to be included by Default -->
+     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+     <TargetGroup Condition="'$([MSBuild]::GetTargetFrameworkIdentifier($(TargetFramework)))'=='.NETCoreApp'">netcoreapp</TargetGroup>
+@@ -37,7 +36,7 @@
+     <EmbeddedFiles Include="$(TargetFrameworkMonikerAssemblyAttributesPath)" />
+   </ItemGroup>
+   <!-- Contains common items shared between NetFx and NetCore -->
+-  <ItemGroup Condition="'$(OSGroup)' != 'AnyOS'">
++  <ItemGroup>
+     <Compile Include="$(CommonPath)\CoreLib\System\Threading\Tasks\TaskToApm.cs">
+       <Link>Common\CoreLib\System\Threading\Tasks\TaskToApm.cs</Link>
+     </Compile>
+@@ -874,7 +873,7 @@
+   </ItemGroup>
+
+   <!-- Unix only -->
+-  <ItemGroup Condition="'$(TargetsUnix)' == 'true'">
++  <ItemGroup Condition="'$(TargetsWindows)' != 'true'">
+     <Compile Include="$(CommonPath)\Interop\Unix\Interop.Libraries.cs">
+       <Link>Common\Interop\Unix\Interop.Libraries.cs</Link>
+     </Compile>
