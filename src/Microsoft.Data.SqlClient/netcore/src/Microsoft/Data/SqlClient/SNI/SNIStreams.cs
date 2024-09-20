@@ -11,13 +11,13 @@ namespace Microsoft.Data.SqlClient.SNI
     /// <summary>
     /// This class extends SslStream to customize stream behavior for Managed SNI implementation.
     /// </summary>
-    internal sealed partial class SNISslStream : SslStream
+    internal sealed partial class SNISslStream : Wasi.Tls.SslStream
     {
         private readonly ConcurrentQueueSemaphore _writeAsyncSemaphore;
         private readonly ConcurrentQueueSemaphore _readAsyncSemaphore;
 
         public SNISslStream(Stream innerStream, bool leaveInnerStreamOpen, RemoteCertificateValidationCallback userCertificateValidationCallback)
-            : base(innerStream, leaveInnerStreamOpen, userCertificateValidationCallback)
+            : base(innerStream)
         {
             _writeAsyncSemaphore = new ConcurrentQueueSemaphore(1);
             _readAsyncSemaphore = new ConcurrentQueueSemaphore(1);

@@ -161,8 +161,8 @@ namespace Microsoft.Data.SqlClient.SNI
                         _sslOverTdsStream = new SslOverTdsStream(_tcpStream, _connectionId);
                         stream = _sslOverTdsStream;
                     }
-                    _sslStream = new Wasi.Tls.SslStream(stream);
-                    //_sslStream = new SNISslStream(stream, true, new RemoteCertificateValidationCallback(ValidateServerCertificate));
+                    //_sslStream = new Wasi.Tls.SslStream(stream);
+                    _sslStream = new SNISslStream(stream, true, new RemoteCertificateValidationCallback(ValidateServerCertificate));
                 }
                 catch (SocketException se)
                 {
