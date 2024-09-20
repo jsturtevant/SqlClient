@@ -134,7 +134,7 @@ namespace Microsoft.Data.SqlClient
         private static int s_currentProcessId = NoProcessId;
         internal static int GetCurrentProcessIdForTdsLoginOnly()
         {
-            if (s_currentProcessId == NoProcessId)
+            if (s_currentProcessId == NoProcessId && !OperatingSystem.IsWasi())
             {
                 // Pick up the process Id from the current process instead of randomly generating it.
                 // This would be helpful while tracing application related issues.

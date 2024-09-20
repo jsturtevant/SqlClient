@@ -1448,6 +1448,7 @@ namespace Microsoft.Data.SqlClient
             {
                 if (ADP.IsCatchableExceptionType(e))
                 {
+                    Console.WriteLine("Catchable expcetion: e.Message: " + e.Message);
                     LoginFailure();
                 }
                 throw;
@@ -1811,11 +1812,13 @@ namespace Microsoft.Data.SqlClient
                     if (IsDoNotRetryConnectError(sqlex)
                             || timeout.IsExpired)
                     {       // no more time to try again
+                        Console.WriteLine("timed out or do not retry");
                         throw;  // Caller will call LoginFailure()
                     }
 
                     if (IsConnectionDoomed)
                     {
+                        Console.WriteLine("connection doomed");
                         throw;
                     }
 
@@ -1825,6 +1828,7 @@ namespace Microsoft.Data.SqlClient
                         //  Do this in the catch block so we can re-throw the current exception
                         if (timeout.MillisecondsRemaining <= sleepInterval)
                         {
+                            Console.WriteLine("timeout remaining less than sleep interval");
                             throw;
                         }
                     }

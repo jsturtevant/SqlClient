@@ -209,6 +209,7 @@ namespace Microsoft.Data.SqlClient.SNI
                         Span<byte> data = packetBuffer.AsSpan(TdsEnums.HEADER_LEN, dataLength);
                         remaining.Slice(0, dataLength).CopyTo(data);
 
+                        Console.WriteLine("writing packetBuffer: " + BitConverter.ToString(packetBuffer));
                         _stream.Write(packetBuffer.AsSpan(0, packetLength));
                         _stream.Flush();
 
