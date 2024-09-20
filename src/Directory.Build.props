@@ -61,7 +61,10 @@
     <GenAPISrcDir Condition="'$(GenAPISrcDir)'==''">$(ToolsDir)GenAPI\</GenAPISrcDir>
     <PackagesDir Condition="'$(PackagesDir)'==''">$(RepoRoot)packages\</PackagesDir>
     <NuGetRoot Condition="'$(NuGetRoot)' == ''">$(RepoRoot).nuget\</NuGetRoot>
-    <NuGetCmd>$(NuGetRoot)nuget.exe</NuGetCmd>
+    <NuGetCmd>dotnet pack</NuGetCmd>
+    <NuGetCmd Condition="$([MSBuild]::IsOSPlatform('Windows'))">nuget.exe</NuGetCmd>
+    <PowershellCmd>pwsh</PowershellCmd>
+    <PowershellCmd Condition="$([MSBuild]::IsOSPlatform('Windows'))">powershell.exe</PowershellCmd>
     <!-- Respect environment variable for the .NET install directory if set; otherwise, use the current default location -->
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <BuildSimulator Condition="'$(BuildSimulator)' != 'true'">false</BuildSimulator>

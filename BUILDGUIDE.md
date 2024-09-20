@@ -262,6 +262,12 @@ msbuild -t:BuildTestsNetFx -p:ReferenceType=Project
 msbuild -t:BuildTestsNetFx -p:ReferenceType=Package
 ```
 
+Build package for wasi on linux
+``` 
+dotnet msbuild -t:BuildNetCoreAllOS
+dotnet pack --include-symbols src/Microsoft.Data.SqlClient/netcore/src/Microsoft.Data.SqlClient.csproj -o ~/dev/packages
+```
+
 ### Running Tests with Reference Type
 
 Provide property to `dotnet test` commands for testing desired reference type.

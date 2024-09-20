@@ -31,13 +31,13 @@ namespace Microsoft.Data.SqlClient.SNI
         private readonly string _targetServer;
         private readonly object _sendSync;
         //private readonly Socket _socket;
-        private Wasi.NetworkStream _tcpStream;
+        private Wasi.Tls.NetworkStream _tcpStream;
         private readonly string _hostNameInCertificate;
         private readonly string _serverCertificateFilename;
         private readonly bool _tlsFirst;
-        private Wasi.TcpClient _tcpClient;
+        private Wasi.Tls.TcpClient _tcpClient;
         private Stream _stream;
-        private Wasi.SslStream _sslStream;
+        private Wasi.Tls.SslStream _sslStream;
         private SslOverTdsStream _sslOverTdsStream;
         private SNIAsyncCallback _receiveCallback;
         private SNIAsyncCallback _sendCallback;
@@ -151,7 +151,7 @@ namespace Microsoft.Data.SqlClient.SNI
                 try
                 {
                     IEnumerable<IPAddress> ipAddresses = GetHostAddressesSortedByPreference(serverName, ipPreference);
-                    _tcpClient = new Wasi.TcpClient();
+                    _tcpClient = new Wasi.Tls.TcpClient();
                     _tcpClient.Connect(ipAddresses.ToArray(), port);
                     
                     _tcpStream = _tcpClient.GetStream();
@@ -161,7 +161,7 @@ namespace Microsoft.Data.SqlClient.SNI
                         _sslOverTdsStream = new SslOverTdsStream(_tcpStream, _connectionId);
                         stream = _sslOverTdsStream;
                     }
-                    _sslStream = new Wasi.SslStream(_tcpStream);
+                    _sslStream = new Wasi.Tls.SslStream(stream);
                     //_sslStream = new SNISslStream(stream, true, new RemoteCertificateValidationCallback(ValidateServerCertificate));
                 }
                 catch (SocketException se)
@@ -245,7 +245,7 @@ namespace Microsoft.Data.SqlClient.SNI
         /// <exception cref="ArgumentOutOfRangeException">Thrown when ipPreference is not supported</exception>
         private static IEnumerable<IPAddress> GetHostAddressesSortedByPreference(string serverName, SqlConnectionIPAddressPreference ipPreference)
         {
-            IPAddress[] ipAddresses = Wasi.Dns.GetHostAddresses(serverName);
+            IPAddress[] ipAddresses = Wasi.Tls.Dns.GetHostAddresses(serverName);
             AddressFamily? prioritiesFamily = ipPreference switch
             {
                 SqlConnectionIPAddressPreference.IPv4First => AddressFamily.InterNetwork,

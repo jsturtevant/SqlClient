@@ -31,7 +31,7 @@ namespace Microsoft.Data.SqlClient.SNI
         private NamedPipeClientStream _pipeStream;
         private SslOverTdsStream _sslOverTdsStream;
 
-        private Wasi.SslStream _sslStream;
+        private Wasi.Tls.SslStream _sslStream;
         private SNIAsyncCallback _receiveCallback;
         private SNIAsyncCallback _sendCallback;
 
@@ -111,7 +111,7 @@ namespace Microsoft.Data.SqlClient.SNI
                     stream = _sslOverTdsStream;
                 }
                 //_sslStream = new SNISslStream(stream, true, new RemoteCertificateValidationCallback(ValidateServerCertificate));
-                _sslStream = new Wasi.SslStream(stream);
+                _sslStream = new Wasi.Tls.SslStream(stream);
                 _stream = _pipeStream;
                 _status = TdsEnums.SNI_SUCCESS;
             }

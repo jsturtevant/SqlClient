@@ -364,3 +364,4 @@ MigrationBackup/
 
 # Config Json file
 **/config.json
+.packages

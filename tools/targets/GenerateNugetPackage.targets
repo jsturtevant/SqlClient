@@ -10,9 +10,8 @@
       <Output TaskParameter="ConsoleOutput" PropertyName="CommitId" />
     </Exec>	
     <Message Text="Commit Id = $(CommitId)" />
-    <Exec Command="powershell.exe -NonInteractive -executionpolicy Unrestricted ^
-      -command &quot;&amp;$(ToolsDir)scripts\downloadLatestNuget.ps1 -nugetDestPath '$(NuGetRoot)'&quot;" />
-    <Exec Command="$(NuGetCmd) pack -Symbols -SymbolPackageFormat snupkg $(ToolsDir)specs\Microsoft.Data.SqlClient.nuspec -Version $(NugetPackageVersion) -OutputDirectory $(PackagesDir) -properties &quot;COMMITID=$(CommitId);Configuration=$(Configuration)&quot;" />
+    <Exec Command="$(PowershellCmd) -NonInteractive -executionpolicy Unrestricted -command &quot;&amp;$(ToolsDir)scripts\downloadLatestNuget.ps1 -nugetDestPath '$(NuGetRoot)'&quot;" />
+    <Exec Command="$(NuGetCmd) --include-symbols src/Microsoft.Data.SqlClient/netcore/src/Microsoft.Data.SqlClient.csproj -p:NuspecFile=$(ToolsDir)specs/Microsoft.Data.SqlClient.nuspec -Version $(NugetPackageVersion) -OutputDirectory $(PackagesDir) -properties &quot;COMMITID=$(CommitId);Configuration=$(Configuration)&quot;" />
   </Target>
   <Target Name="GenerateSqlServerPackage" Condition="'$(GenerateNuget)' == 'true'">
     <PropertyGroup>

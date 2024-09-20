@@ -21,7 +21,7 @@ namespace Microsoft.Data.SqlClient.SNI
 
         protected static readonly List<SslApplicationProtocol> s_tdsProtocols = new List<SslApplicationProtocol>(1) { new(TdsEnums.TDS8_Protocol) };
 
-        protected static async Task AuthenticateAsClientAsync(Wasi.SslStream sslStream, string serverNameIndication, X509CertificateCollection certificate, CancellationToken token)
+        protected static async Task AuthenticateAsClientAsync(Wasi.Tls.SslStream sslStream, string serverNameIndication, X509CertificateCollection certificate, CancellationToken token)
         {
             SslClientAuthenticationOptions sslClientOptions = new()
             {
@@ -32,9 +32,9 @@ namespace Microsoft.Data.SqlClient.SNI
             await sslStream.AuthenticateAsClientAsync(serverNameIndication);
         }
 
-        protected static void AuthenticateAsClient(Wasi.SslStream sslStream, string serverNameIndication, X509CertificateCollection certificate)
+        protected static void AuthenticateAsClient(Wasi.Tls.SslStream sslStream, string serverNameIndication, X509CertificateCollection certificate)
         {
-            WasiEventLoop.RunAsync(() => AuthenticateAsClientAsync(sslStream, serverNameIndication, certificate, CancellationToken.None));
+            Wasi.Tls.WasiEventLoop.RunAsync(() => AuthenticateAsClientAsync(sslStream, serverNameIndication, certificate, CancellationToken.None));
         }
 
         /// <summary>

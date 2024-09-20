@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <AssemblyName>Microsoft.Data.SqlClient</AssemblyName>
-    <TargetFrameworks>net8.0;net6.0</TargetFrameworks>
+    <TargetFrameworks>net8.0;net9.0</TargetFrameworks>
     <TargetsUnix Condition="'$(OSGroup)'!='Unix'">true</TargetsUnix>
     <OSGroup Condition="'$(OSGroup)' == ''">$(OS)</OSGroup>
     <TargetsWindows Condition="'$(OSGroup)'=='Windows_NT'">true</TargetsWindows>
@@ -16,7 +16,7 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Product>Core $(BaseProduct)</Product>
     <EnableTrimAnalyzer Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net6.0'))">true</EnableTrimAnalyzer>
-    <NoWarn>$(NoWarn);IL2026;IL2057;IL2072;IL2075;CS3002;CS3001;CS3003;CS3005;CS1591</NoWarn>
+    <NoWarn>$(NoWarn);IL2026;IL2057;IL2072;IL2075;CS3002;CS3001;CS3003;CS3005;CS1591;SYSLIB0057</NoWarn>
     <RootNamespace />
   </PropertyGroup>
   <!--Generating Strong Name-->
@@ -976,13 +976,6 @@
 
   <!-- todo only build when wasi -->
   <ItemGroup >
-    <WitComponentImports Include="$(CommonPath)\Interop\Wasi\**\*.wit"/>
-    <CustomLinkerArg Include="@(WitComponentImports->Replace('\', '/')->'-Wl,--component-type,&quot;%(Identity)&quot;')" />
-    <Compile Include="$(CommonPath)\Interop\Wasi\Dns.cs" />
-    <Compile Include="$(CommonPath)\Interop\Wasi\TcpClient.cs" />
-    <Compile Include="$(CommonPath)\Interop\Wasi\SslStream.cs" />
-    <Compile Include="$(CommonPath)\Interop\Wasi\NetworkStream.cs" />
-    <Compile Include="$(CommonPath)\Interop\Wasi\Imports*.cs" />
-    <Compile Include="$(CommonPath)\Interop\Wasi\WasiEventLoop.cs" />
+    <PackageReference Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net8.0'))" Include="Wasi.Tls" Version="0.0.1" />
   </ItemGroup>
 </Project>
